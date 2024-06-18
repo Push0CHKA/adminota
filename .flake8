@@ -1,0 +1,6 @@
+[flake8]
+exclude =
+    venv,__pycache__,.env,.venv,.idea
+ignore =
+    I001,I003,I004,I005,W503,F401
+max-line-length = 79
