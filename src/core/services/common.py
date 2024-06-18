@@ -156,3 +156,9 @@ class App(ABC):
                 use_colors=True,
                 **get_settings().uvicorn_kwargs,
             )
+
+    def get_app(self) -> FastAPI:
+        """For testing"""
+        self.configure_routes()
+        return self._app
+

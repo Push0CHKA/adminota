@@ -16,7 +16,7 @@ from src.core.models.db_models import Gids
 
 class VkScriptMaker:
     """Vk script maker.
-    Create special scripts for vk api
+    Create special scripts for vk routes
     """
 
     logger = logger

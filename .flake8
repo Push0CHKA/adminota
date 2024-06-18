@@ -1,6 +1,6 @@
 [flake8]
 exclude =
-    venv,__pycache__,.env,.venv,.idea
+    venv,__pycache__,.env,.venv,.idea,*migrations*
 ignore =
-    I001,I003,I004,I005,W503,F401
+    E501,E203,E402,E712,I001,I003,I004,I005,W503,F401
 max-line-length = 79
