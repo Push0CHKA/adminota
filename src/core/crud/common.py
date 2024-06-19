@@ -1,19 +1,23 @@
 from functools import wraps
-from typing import (
-    TypeVar,
-    TypeAlias,
-    Callable,
-    Awaitable,
-    Any,
-    Iterable,
-    Generic, Generator,
-)
+from typing import Any
+from typing import Awaitable
+from typing import Callable
+from typing import Generator
+from typing import Generic
+from typing import Iterable
+from typing import TypeAlias
+from typing import TypeVar
 
-from pydantic import BaseModel
-from sqlalchemy import Select, select, update, CursorResult, delete
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql.elements import OperatorExpression, UnaryExpression
 from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
+from sqlalchemy import CursorResult
+from sqlalchemy import delete
+from sqlalchemy import Select
+from sqlalchemy import select
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import OperatorExpression
+from sqlalchemy.sql.elements import UnaryExpression
 
 from src.core.database.database import Base
 
@@ -24,9 +28,7 @@ CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 
 
 CRUDBaseCommonMethodType: TypeAlias = (
-    Callable[
-        [AsyncSession, dict[str, ...], int, int], Awaitable[list[ModelType]]
-    ]
+    Callable[[AsyncSession, dict[str, ...], int, int], Awaitable[list[ModelType]]]
     | Callable[[AsyncSession, dict[str, ...]], Awaitable[ModelType] | None]
     | Callable[[AsyncSession, dict[str, ...], dict[str, ...], bool], None]
 )
@@ -71,8 +73,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
     ) -> Generator[bool, Any, None]:
         filter_dict = filter_dict or {}
         return (
-            getattr(self._model, field) == value
-            for field, value in filter_dict.items()
+            getattr(self._model, field) == value for field, value in filter_dict.items()
         )
 
     @property
@@ -80,9 +81,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         """can be used for config options with inload"""
         return select(self._model)
 
-    def _resolve_filter(
-        self, filter_: UpdateFilter
-    ) -> list[OperatorExpression]:
+    def _resolve_filter(self, filter_: UpdateFilter) -> list[OperatorExpression]:
         if isinstance(filter_, dict):
             filter_ = self._generate_where_cause(filter_)
 
@@ -145,9 +144,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         filter_dict: dict[str, ...],
         options: Any | None = None,
     ) -> ModelType:
-        stmt = self._select_model.where(
-            *self._generate_where_cause(filter_dict)
-        )
+        stmt = self._select_model.where(*self._generate_where_cause(filter_dict))
         if options:
             operator_expressions = self._resolve_filter(options)
             stmt = stmt.options(*operator_expressions)
@@ -200,9 +197,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         in other case set possible null values"""
 
         if is_patch:
-            update_values = {
-                k: v for k, v in update_values.items() if v is not None
-            }
+            update_values = {k: v for k, v in update_values.items() if v is not None}
         update_stmt = update(self._model)
         if update_filter:
             operator_expressions = self._resolve_filter(update_filter)
@@ -210,7 +205,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         update_stmt = update_stmt.values(**update_values)
         result: CursorResult = await session.execute(update_stmt)
         return result.rowcount
-    
+
     async def delete(
         self,
         session: AsyncSession,

@@ -21,4 +21,3 @@ class TokenError(Exception):
     def __init__(self, message="Vk token error"):
         self.message = message
         super().__init__(self.message)
-

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class OrmSchema(BaseModel):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class IdIntIndexSchema(OrmSchema):
@@ -25,4 +25,3 @@ class TokenSchemaCreate(OrmSchema):
 
 class TokenSchema(IdIntIndexSchema, DateCreateSchema, TokenSchemaCreate):
     ...
-

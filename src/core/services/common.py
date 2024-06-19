@@ -1,5 +1,6 @@
 import asyncio
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 
 import uvicorn
 from fastapi import FastAPI
@@ -35,9 +36,7 @@ class Service(ABC):
 
     def main_task_done_callback(self, task: asyncio.Task):
         try:
-            self.logger.warning(
-                f"Result of {self.name} main task {task.result()}"
-            )
+            self.logger.warning(f"Result of {self.name} main task {task.result()}")
         except asyncio.CancelledError:
             self.logger.info(f"Cancelling {self.name}...")
         except Exception as e:
@@ -73,9 +72,7 @@ class Service(ABC):
             except Exception as e:
                 is_handled = await self._handling_exception(e)
                 if not is_handled:
-                    self.logger.warning(
-                        f"There is no handler for {e} [{type(e)}"
-                    )
+                    self.logger.warning(f"There is no handler for {e} [{type(e)}")
                 continue
             finally:
                 self.logger.info(f"Cleaning up after {self.name} service")
@@ -91,7 +88,6 @@ class Service(ABC):
 
 
 class AppEventHandler(ABC):
-
     @abstractmethod
     async def on_startup(self):
         raise NotImplementedError
@@ -161,4 +157,3 @@ class App(ABC):
         """For testing"""
         self.configure_routes()
         return self._app
-

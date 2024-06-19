@@ -1,4 +1,3 @@
-
 from src.core.services.common import Service
 from src.parser.utils.vk_parser import Parser
 
@@ -17,6 +16,8 @@ class Scheduler(Service):
         while True:
             await self.start_parser(1)
 
-    async def _initialize_logic(self): ...
+    async def _initialize_logic(self):
+        ...
 
-    async def cleanup(self): ...
+    async def cleanup(self):
+        ...

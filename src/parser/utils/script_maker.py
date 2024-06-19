@@ -1,17 +1,15 @@
 from typing import AsyncGenerator
 
-from sqlalchemy import select, and_
-
 from loguru import logger
+from sqlalchemy import and_
+from sqlalchemy import select
 
-from src.core.configuration.script_settings import (
-    VKS_MAIN_GROUP,
-    VKS_RETURN_LIST,
-    ID_GROUP_PARAMS,
-)
+from src.core.configuration.script_settings import ID_GROUP_PARAMS
+from src.core.configuration.script_settings import VKS_MAIN_GROUP
+from src.core.configuration.script_settings import VKS_RETURN_LIST
 from src.core.database.database import get_session
-from src.core.schemas.api_schemas import VkApiParams
 from src.core.models.db_models import Gids
+from src.core.schemas.api_schemas import VkApiParams
 
 
 class VkScriptMaker:
@@ -43,13 +41,11 @@ class VkScriptMaker:
                     db_gids = await session.execute(
                         select(Gids.group_id).where(
                             and_(
-                                Gids.group_id % VkApiParams().pars_cnt
-                                == self.pars_id,
+                                Gids.group_id % VkApiParams().pars_cnt == self.pars_id,
                                 Gids.group_id > offset,
                                 Gids.group_id
                                 < offset
-                                + VkApiParams().gid_scr_cnt
-                                * VkApiParams().grp_cnt_req,
+                                + VkApiParams().gid_scr_cnt * VkApiParams().grp_cnt_req,
                             )
                         )
                     )

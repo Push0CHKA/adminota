@@ -1,6 +1,7 @@
 import sqlalchemy
 from loguru import logger
-from sqlalchemy.exc import NoResultFound, SQLAlchemyError
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.core.crud.token import get_token_crud
 from src.core.database.database import get_session
@@ -18,9 +19,7 @@ class TokenManager:
     @classmethod
     async def get_active_token(cls) -> Token:
         while True:
-            if await cls._is_valid_token(
-                token := await cls._get_token_from_db()
-            ):
+            if await cls._is_valid_token(token := await cls._get_token_from_db()):
                 await cls._mark_token_as_using(token)
                 return token
 
@@ -34,7 +33,7 @@ class TokenManager:
                 params={
                     "access_token": token.token,
                     "v": VkApiParams().version,
-                    "group_id": "1"
+                    "group_id": "1",
                 },
             )
         except exc.VkApiError:
@@ -52,7 +51,7 @@ class TokenManager:
                 update_filter={Token.id.name: token.id},
                 update_values={
                     Token.in_use.name: False,
-                    Token.deactivated.name: True
+                    Token.deactivated.name: True,
                 },
             )
             await get_token_crud().commit(session)
@@ -77,7 +76,7 @@ class TokenManager:
                     {
                         Token.in_use.name: False,
                         Token.deactivated.name: False,
-                    }
+                    },
                 )
             except NoResultFound:
                 raise TokenError("No available token in database")

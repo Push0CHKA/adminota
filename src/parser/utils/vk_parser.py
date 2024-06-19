@@ -1,7 +1,7 @@
 from loguru import logger
 
-from src.core.schemas.api_schemas import VkApiCodes
 from src.core.models.db_models import Token
+from src.core.schemas.api_schemas import VkApiCodes
 from src.parser.exceptions import exc
 from src.parser.exceptions.exc import TokenError
 from src.parser.utils.reqsts import VkApiRequest
@@ -60,5 +60,3 @@ class Parser:
                 raise
             for d in data:
                 print(d)
-
-

@@ -1,6 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Boolean, Integer, DateTime, func
+from sqlalchemy import Boolean
+from sqlalchemy import Column
+from sqlalchemy import DateTime
+from sqlalchemy import func
+from sqlalchemy import Integer
 
 
 class BlacklistedMixin:
@@ -18,7 +22,4 @@ class IdIntMixin:
 class DateCreateMixin:
     """Provides datetime created date"""
 
-    created_at = Column(
-        DateTime, default=datetime.now, server_default=func.now()
-    )
-
+    created_at = Column(DateTime, default=datetime.now, server_default=func.now())
