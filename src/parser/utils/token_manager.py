@@ -1,26 +1,36 @@
+import asyncio
+from functools import lru_cache
+
 import sqlalchemy
 from loguru import logger
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.exc import SQLAlchemyError
 
 from src.core.crud.token import get_token_crud
 from src.core.database.database import get_session
 from src.core.models.db_models import Token
-from src.core.schemas.api_schemas import VkApiParams
 from src.parser.exceptions import exc
 from src.parser.exceptions.exc import TokenError
+from src.parser.schemas.vk_api_schemas import VkApiParams
+from src.parser.schemas.vk_api_schemas import VkApiSettings
 from src.parser.utils.reqsts import VkApiRequest
 
 
 class TokenManager:
     logger = logger
     vk_request = VkApiRequest
+    _is_approved = asyncio.Event()
+
+    def __init__(self):
+        self._is_approved.set()
 
     @classmethod
     async def get_active_token(cls) -> Token:
+        await cls._is_approved.wait()
         while True:
+            cls._is_approved.clear()
             if await cls._is_valid_token(token := await cls._get_token_from_db()):
                 await cls._mark_token_as_using(token)
+                cls._is_approved.set()
                 return token
 
     @classmethod
@@ -32,15 +42,16 @@ class TokenManager:
                 url="https://api.vk.com/method/groups.getById",
                 params={
                     "access_token": token.token,
-                    "v": VkApiParams().version,
+                    "v": VkApiParams.API_VERSION,
                     "group_id": "1",
                 },
+                attempts_count=VkApiSettings.ATTEMPT_COUNT,
             )
         except exc.VkApiError:
-            cls.logger.debug(f"Token with ID: {token.id} spoiled")
+            cls.logger.debug(f"Token(ID:{token.id}) verification failed")
             await cls._mark_token_as_spoiled(token)
             return False
-        cls.logger.debug(f"Token with ID: {token.id} was passed")
+        cls.logger.debug(f"Token(ID:{token.id}) was passed")
         return True
 
     @staticmethod
@@ -78,9 +89,14 @@ class TokenManager:
                         Token.deactivated.name: False,
                     },
                 )
-            except NoResultFound:
-                raise TokenError("No available token in database")
+                if token is None:
+                    raise TokenError("No available token in database")
             except sqlalchemy.exc.SQLAlchemyError as e:
                 raise TokenError(f"Unhandled SQLAlchemy error: {e}")
         cls.logger.debug("Token was successfully got from database")
         return token
+
+
+@lru_cache(None)
+def get_token() -> TokenManager:
+    return TokenManager()

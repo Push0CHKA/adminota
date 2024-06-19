@@ -1,12 +1,17 @@
-from loguru import logger
+from typing import Callable
 
+from loguru import logger
+from pydantic import ValidationError
+
+from src.core.crud.gid import get_gid_crud
+from src.core.database.database import get_session
 from src.core.models.db_models import Token
-from src.core.schemas.api_schemas import VkApiCodes
+from src.core.schemas.schemas import GidSchema
 from src.parser.exceptions import exc
-from src.parser.exceptions.exc import TokenError
+from src.parser.schemas.vk_api_schemas import VkApiErrorCodes
 from src.parser.utils.reqsts import VkApiRequest
-from src.parser.utils.script_maker import VkScriptMaker
-from src.parser.utils.token_manager import TokenManager
+from src.parser.utils.script_maker import GidScriptIterator
+from src.parser.utils.token_manager import get_token
 
 
 class Parser:
@@ -18,29 +23,35 @@ class Parser:
     def __init__(self, pars_id: int):
         self.pars_id = pars_id
         self.token: Token | None = None
-        self.scr_maker: VkScriptMaker = VkScriptMaker(pars_id)
 
     async def run_parse_gids(self):
-        try:
-            await self._update_token()
-        except TokenError:
-            raise
+        await self._update_token()
         await self._pars_gids()
 
     async def _update_token(self):
         self.logger.debug(f"Parser {self.pars_id}: Try update token for parser")
-        self.token = await TokenManager.get_active_token()
+        self.token = await get_token().get_active_token()
         self.logger.debug(f"Parser {self.pars_id}: token was successfully updated")
 
-    async def _pars_gids(self):
-        gen = self.scr_maker.get_gid_script()
-        while True:
+    async def _upload_gids(self, data: list[list[dict]]):
+        for group_data in data:
             try:
-                script = await anext(gen)
-            except StopAsyncIteration:
-                break
-            try:
-                data: list[dict] = await self.vk_request.request(
+                if not group_data:
+                    self.logger.warning(
+                        f"Failed mapped json data do Gid model. Json: {group_data}"
+                    )
+                    continue
+                gid = GidSchema.parse_obj(group_data[0])
+                gid.id = None
+            except ValidationError:
+                continue
+            async with get_session() as session:
+                await get_gid_crud().create_with_commit(session, obj_in=gid)
+
+    async def _execute_cript(self, script: str, upload: Callable):
+        try:
+            await upload(
+                await self.vk_request.request(
                     method="POST",
                     url="https://api.vk.com/method/execute",
                     data={
@@ -49,14 +60,21 @@ class Parser:
                         "code": script,
                     },
                 )
-            except exc.VkApiError as e:
-                if e.error_code in VkApiCodes.token_error:
-                    await self._update_token()
-                elif e.error_code in VkApiCodes.too_big_data:
-                    # todo change response size
-                    ...
-                continue
-            except Exception:
-                raise
-            for d in data:
-                print(d)
+            )
+        except exc.VkApiError as e:
+            if e.error_code in VkApiErrorCodes.TOKEN_ERROR:
+                await self._update_token()
+            elif e.error_code in VkApiErrorCodes.TOO_BIG_DATA:
+                # todo change response size
+                ...
+            raise
+        except Exception as e:
+            self.logger.error(f"Unhandled error when parsing group ids. Error: {e}")
+            raise
+
+    async def _pars_gids(self):
+        """Parsing all group ids"""
+        self.logger.info(f"Parser ID: {self.pars_id} Start parsing groups id")
+        async for script in GidScriptIterator(self.pars_id):
+            await self._execute_cript(script, self._upload_gids)
+        self.logger.info(f"Parser ID: {self.pars_id} Finish parsing groups id")

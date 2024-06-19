@@ -148,7 +148,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         if options:
             operator_expressions = self._resolve_filter(options)
             stmt = stmt.options(*operator_expressions)
-        return (await session.execute(stmt)).scalars().one()
+        return (await session.execute(stmt)).scalars().first()
 
     @map_to_schema_result
     async def get_one(

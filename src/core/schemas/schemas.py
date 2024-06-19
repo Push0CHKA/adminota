@@ -1,15 +1,19 @@
 from datetime import datetime
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 
 
 class OrmSchema(BaseModel):
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-class IdIntIndexSchema(OrmSchema):
-    id: int
+class IdIndexSchema(OrmSchema):
+    id: int = None
+
+
+class BlacklistedSchema(OrmSchema):
+    blacklisted: bool = False
 
 
 class DateCreateSchema(OrmSchema):
@@ -23,5 +27,19 @@ class TokenSchemaCreate(OrmSchema):
     last_use_date: datetime | None = None
 
 
-class TokenSchema(IdIntIndexSchema, DateCreateSchema, TokenSchemaCreate):
+class TokenSchema(IdIndexSchema, DateCreateSchema, TokenSchemaCreate):
+    ...
+
+
+class GidSchemaCreate(OrmSchema):
+    group_id: int
+    members_count: int
+    deactivated_day_count: int = 0
+
+    def __init__(self, **kwargs):
+        kwargs["group_id"] = kwargs["id"]
+        super().__init__(**kwargs)
+
+
+class GidSchema(IdIndexSchema, BlacklistedSchema, GidSchemaCreate):
     ...

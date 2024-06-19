@@ -3,10 +3,12 @@ from json import JSONDecodeError
 from typing import Literal
 
 import httpx
+from httpx import ConnectError
+from httpx import Response
+from httpx import TimeoutException
 from loguru import logger
-from httpx import TimeoutException, ConnectError, Response
 
-from src.core.schemas.api_schemas import RequestSettings
+from src.parser.schemas.vk_api_schemas import VkApiSettings
 
 
 class Request:
@@ -17,9 +19,7 @@ class Request:
         try:
             return resp.json()
         except JSONDecodeError:
-            cls.logger.error(
-                f"Got not jsonable response with body {resp.text}"
-            )
+            cls.logger.error(f"Got not jsonable response with body {resp.text}")
 
     @classmethod
     async def common_request(
@@ -43,24 +43,8 @@ class Request:
                     data=data,
                     params=params,
                     json=json_,
-                    timeout=RequestSettings.timeout,
+                    timeout=VkApiSettings.TIMEOUT,
                 )
-        except TimeoutException as err:
-            cls.logger.warning(
-                f"Timeout error on sending request to {url}: {err}"
-            )
-            raise
-        except ConnectError as err:
-            cls.logger.warning(
-                f"Connection error on sending request to {url}: {err}"
-            )
-            raise
-        except Exception as err:
-            cls.logger.error(
-                f"Unhandled error when try make request. Error: {err}"
-            )
-            raise
-        finally:
             cls.logger.debug(
                 f"Make request to {url}.\n"
                 f"headers: {headers}\n"
@@ -71,11 +55,18 @@ class Request:
                 # f"response body: {resp.text if resp else None}\n"
                 f"status code: {resp.status_code if resp else None}"
             )
+        except TimeoutException as err:
+            cls.logger.warning(f"Timeout error on sending request to {url}: {err}")
+            raise
+        except ConnectError as err:
+            cls.logger.warning(f"Connection error on sending request to {url}: {err}")
+            raise
+        except Exception as err:
+            cls.logger.error(f"Unhandled error when try make request. Error: {err}")
+            raise
         resp_data = cls.dispatch_response(resp) if len(resp.text) else ""
         if resp.is_success:
             cls.logger.debug(f"Received success response [{resp.status_code}]")
         else:
-            cls.logger.warning(
-                f"Received not success response [{resp.status_code}]"
-            )
+            cls.logger.warning(f"Received not success response [{resp.status_code}]")
         return resp.status_code, resp_data

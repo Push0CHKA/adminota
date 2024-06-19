@@ -13,7 +13,7 @@ class BlacklistedMixin:
     blacklisted = Column(Boolean, default=False)
 
 
-class IdIntMixin:
+class IdMixin:
     """Provides int id"""
 
     id = Column(Integer, primary_key=True, autoincrement=True)
