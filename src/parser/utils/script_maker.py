@@ -1,6 +1,5 @@
 from typing import AsyncGenerator
 
-from loguru import logger
 from sqlalchemy import and_
 from sqlalchemy import select
 
@@ -8,6 +7,7 @@ from src.core.configuration.script_settings import ID_GROUP_PARAMS
 from src.core.configuration.script_settings import VKS_MAIN_GROUP
 from src.core.configuration.script_settings import VKS_RETURN_LIST
 from src.core.database.database import get_session
+from src.core.log.setup_log import ParsLogger
 from src.core.models.db_models import Gid
 from src.parser.schemas.vk_api_schemas import VkApiParams
 
@@ -15,12 +15,11 @@ from src.parser.schemas.vk_api_schemas import VkApiParams
 class GidScriptIterator:
     """Groups id script async iterator. Create vk scripts."""
 
-    logger = logger
-
     def __init__(self, pars_id: int, start_gid: int = 0):
         self.pars_id = pars_id  # parser id
         self.start_id = start_gid  # start group id
         self.generator = self._get_gid_script()
+        self.logger: ParsLogger = ParsLogger(pars_id)
 
     def __aiter__(self):
         return self
@@ -50,7 +49,7 @@ class GidScriptIterator:
                                 Gid.group_id > offset,
                                 Gid.group_id
                                 < offset
-                                + VkApiParams.gid_scr_cnt * VkApiParams.grp_cnt_req,
+                                + VkApiParams.gid_scr_cnt * VkApiParams.grp_cnt_req * 2,
                             )
                         )
                     )
@@ -76,10 +75,7 @@ class GidScriptIterator:
             if (
                 script_cnt % VkApiParams.gid_scr_cnt == 0 and script_cnt != 0
             ) or gid == VkApiParams.MAX_GID - self.pars_id:
-                self.logger.debug(
-                    f"Parser №{self.pars_id}({VkApiParams.pars_cnt}) "
-                    f"get group id. Offset: {offset}"
-                )
+                self.logger.info(f"Generate gid script. Offset: {offset}")
                 yield VKS_RETURN_LIST.format(data=vk_script[:-1])
                 vk_script = ""
                 script_cnt = 0

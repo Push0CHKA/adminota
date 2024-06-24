@@ -1,14 +1,14 @@
 from typing import Callable
 
-from loguru import logger
 from pydantic import ValidationError
 
 from src.core.crud.gid import get_gid_crud
 from src.core.database.database import get_session
+from src.core.log.setup_log import ParsLogger
 from src.core.models.db_models import Token
 from src.core.schemas.schemas import GidSchema
 from src.parser.exceptions import exc
-from src.parser.schemas.vk_api_schemas import VkApiErrorCodes
+from src.parser.schemas.vk_api_schemas import VkApiErrorCodes, VkApiParams
 from src.parser.utils.reqsts import VkApiRequest
 from src.parser.utils.script_maker import GidScriptIterator
 from src.parser.utils.token_manager import get_token
@@ -17,21 +17,21 @@ from src.parser.utils.token_manager import get_token
 class Parser:
     """Vk parser"""
 
-    logger = logger
-    vk_request = VkApiRequest
+    vk_request: VkApiRequest = VkApiRequest
 
     def __init__(self, pars_id: int):
         self.pars_id = pars_id
         self.token: Token | None = None
+        self.logger: ParsLogger = ParsLogger(pars_id)
 
     async def run_parse_gids(self):
         await self._update_token()
         await self._pars_gids()
 
     async def _update_token(self):
-        self.logger.debug(f"Parser {self.pars_id}: Try update token for parser")
+        self.logger.info("Try update token for parser")
         self.token = await get_token().get_active_token()
-        self.logger.debug(f"Parser {self.pars_id}: token was successfully updated")
+        self.logger.info("Token was successfully updated")
 
     async def _upload_gids(self, data: list[list[dict]]):
         for group_data in data:
@@ -40,6 +40,8 @@ class Parser:
                     self.logger.warning(
                         f"Failed mapped json data do Gid model. Json: {group_data}"
                     )
+                    continue
+                if group_data[0].get("members_count", 0) < VkApiParams.MIN_MEMBERS_CNT:
                     continue
                 gid = GidSchema.parse_obj(group_data[0])
                 gid.id = None
@@ -63,6 +65,7 @@ class Parser:
             )
         except exc.VkApiError as e:
             if e.error_code in VkApiErrorCodes.TOKEN_ERROR:
+                self.logger.debug(f"Received token error [{e.error_code}, {e.message}]")
                 await self._update_token()
             elif e.error_code in VkApiErrorCodes.TOO_BIG_DATA:
                 # todo change response size
@@ -74,7 +77,7 @@ class Parser:
 
     async def _pars_gids(self):
         """Parsing all group ids"""
-        self.logger.info(f"Parser ID: {self.pars_id} Start parsing groups id")
+        self.logger.info("Start parsing groups id")
         async for script in GidScriptIterator(self.pars_id):
             await self._execute_cript(script, self._upload_gids)
-        self.logger.info(f"Parser ID: {self.pars_id} Finish parsing groups id")
+        self.logger.info("Finish parsing groups id")

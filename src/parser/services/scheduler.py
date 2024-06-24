@@ -14,8 +14,10 @@ class Scheduler(Service):
 
     async def run_parser(self):
         for parser_id in range(VkApiParams.pars_cnt):
-            parser = Parser(parser_id + 1)
-            self.tasks.append(asyncio.create_task(parser.run_parse_gids()))
+            parser = Parser(parser_id)
+            self.tasks.append(
+                asyncio.create_task(parser.run_parse_gids(), name=f"parser_{parser_id}")
+            )
 
     async def _run(self):
         await self.run_parser()

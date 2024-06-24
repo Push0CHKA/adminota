@@ -10,8 +10,8 @@ class VkApiSettings:
 @dataclass
 class VkApiParams:
     API_VERSION: float = 5.131
-    MAX_GID: int = 100000
-    MIN_MEMBERS_CNT: int = 100000
+    MAX_GID: int = 1000000
+    MIN_MEMBERS_CNT: int = 10000
     pars_cnt: int = 2
     grp_cnt_req: int = 450
     req_timeout: int = 15

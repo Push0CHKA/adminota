@@ -45,14 +45,11 @@ class Request:
                     json=json_,
                     timeout=VkApiSettings.TIMEOUT,
                 )
-            cls.logger.debug(
-                f"Make request to {url}.\n"
-                f"headers: {headers}\n"
-                f"data: {data}\n"
-                f"params: {params}\n"
-                f"json: {json_}\n"
-                f"request time: {(time.time() - before_request_time) * 1000}\n"
-                # f"response body: {resp.text if resp else None}\n"
+            cls.logger.trace(
+                f"Make request to {url} | headers: {headers} | data: {data} | "
+                f"params: {params} | json: {json_} | "
+                f"request time: {round(time.time() - before_request_time)} | "
+                f"response body: {resp.text if resp else None} | "
                 f"status code: {resp.status_code if resp else None}"
             )
         except TimeoutException as err:
