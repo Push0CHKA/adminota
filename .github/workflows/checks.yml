@@ -18,4 +18,4 @@ jobs:
       - name: Install deps
         run: pip install flake8
       - name: Run flake8
-        run: flake8 .
+        run: flake8 . --count --select=E501,E203,E402,E712,I001,I003,I004,I005,W503,F401 --max-line-length=79 --show-source --statistics

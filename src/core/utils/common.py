@@ -4,7 +4,6 @@ from dotenv import load_dotenv, find_dotenv
 
 
 class SystemManager:
-
     @staticmethod
     def arg_parse() -> argparse.Namespace:
         log_level = "INFO"
@@ -19,7 +18,7 @@ class SystemManager:
             "-p",
             "--log-path",
             default=None,
-            help=f"Logging file path",
+            help="Logging file path",
         )
         return parser.parse_args()
 
