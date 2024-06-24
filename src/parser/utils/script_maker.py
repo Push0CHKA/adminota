@@ -3,9 +3,9 @@ from typing import AsyncGenerator
 from sqlalchemy import and_
 from sqlalchemy import select
 
-from src.core.configuration.script_settings import ID_GROUP_PARAMS
-from src.core.configuration.script_settings import VKS_MAIN_GROUP
-from src.core.configuration.script_settings import VKS_RETURN_LIST
+from src.parser.schemas.script_settings import ID_GROUP_PARAMS
+from src.parser.schemas.script_settings import VKS_MAIN_GROUP
+from src.parser.schemas.script_settings import VKS_RETURN_LIST
 from src.core.database.database import get_session
 from src.core.log.setup_log import ParsLogger
 from src.core.models.db_models import Gid
