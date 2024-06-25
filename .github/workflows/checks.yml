@@ -15,7 +15,13 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.9
-      - name: Install deps
+      - name: Install linter
         run: pip install flake8
       - name: Run flake8
         run: flake8 . --count --select=E501,E203,E402,E712,I001,I003,I004,I005,W503,F401 --max-line-length=79 --show-source --statistics
+      - name: Install requirements
+        run: pip install -r requirements.txt
+      - name: Install pytest
+        run: pip install pytest
+      - name: Run pytest
+        run: pytest
