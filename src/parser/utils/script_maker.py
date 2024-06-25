@@ -117,16 +117,17 @@ class GroupScriptIterator(ScriptIterator):
         for offset in range(0, gid_cnt, MainGroupApiParams.GROUPS_CNT_IN_REQ):
             script_cnt += 1
             # Get gids from db
-            gids = await get_gid_crud().get_multi_model(
-                session,
-                limit=MainGroupApiParams.GROUPS_CNT_IN_REQ,
-                offset=offset,
-                filter_=[
-                    [
-                        f"{Gid.group_id} % {MainGroupApiParams.PARSERS_CNT} = {self.pars_id}"
-                    ]
-                ],
-            )
+            async with get_session() as session:
+                gids = await get_gid_crud().get_multi_model(
+                    session,
+                    limit=MainGroupApiParams.GROUPS_CNT_IN_REQ,
+                    offset=offset,
+                    filter_=[
+                        [
+                            f"{Gid.group_id} % {MainGroupApiParams.PARSERS_CNT} = {self.pars_id}"
+                        ]
+                    ],
+                )
             # Create main group data vkscript
             vk_script += VKS_MAIN_GROUP.format(
                 group_ids="".join(f"{gid.group_id}," for gid in gids)[:-1],
