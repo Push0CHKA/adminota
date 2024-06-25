@@ -46,9 +46,8 @@ class Base:
 
 @asynccontextmanager
 async def get_session() -> AsyncSession:
-    database = Database()
     try:
-        async with database.AsyncSessionLocal() as session:
+        async with Database().AsyncSessionLocal() as session:
             yield session
     except SQLAlchemyError:
         await session.rollback()

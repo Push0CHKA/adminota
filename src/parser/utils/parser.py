@@ -3,14 +3,18 @@ from typing import Callable
 from pydantic import ValidationError
 
 from src.core.crud.gid import get_gid_crud
+from src.core.crud.group import get_group_crud
 from src.core.database.database import get_session
 from src.core.log.setup_log import ParsLogger
 from src.core.models.db_models import Token
-from src.core.schemas.schemas import GidSchema
+from src.core.schemas.schemas import GidSchema, GroupSchema
 from src.parser.exceptions import exc
 from src.parser.schemas.vk_api_schemas import VkApiErrorCodes, VkApiParams
 from src.parser.utils.reqsts import VkApiRequest
-from src.parser.utils.script_maker import GidScriptIterator
+from src.parser.utils.script_maker import (
+    GidScriptIterator,
+    GroupScriptIterator,
+)
 from src.parser.utils.token_manager import get_token
 
 
@@ -27,6 +31,7 @@ class Parser:
     async def run_parse_gids(self):
         await self._update_token()
         await self._pars_gids()
+        await self._pars_groups()
 
     async def _update_token(self):
         self.logger.info("Try update token for parser")
@@ -35,12 +40,12 @@ class Parser:
 
     async def _upload_gids(self, data: list[list[dict]]):
         for group_data in data:
+            if not group_data:
+                self.logger.warning(
+                    f"Failed mapped json data do Gid model. Json: {group_data}"
+                )
+                continue
             try:
-                if not group_data:
-                    self.logger.warning(
-                        f"Failed mapped json data do Gid model. Json: {group_data}"
-                    )
-                    continue
                 if group_data[0].get("members_count", 0) < VkApiParams.MIN_MEMBERS_CNT:
                     continue
                 gid = GidSchema.parse_obj(group_data[0])
@@ -49,6 +54,22 @@ class Parser:
                 continue
             async with get_session() as session:
                 await get_gid_crud().create_with_commit(session, obj_in=gid)
+
+    async def _upload_group(self, data: list[list[dict]]):
+        for groups_data in data:
+            if not groups_data:
+                self.logger.warning(
+                    f"Failed mapped json data do group model. Json: {groups_data}"
+                )
+                continue
+            for group_data in groups_data:
+                try:
+                    group = GroupSchema.parse_obj(group_data)
+                    group.id = None
+                except ValidationError:
+                    continue
+                async with get_session() as session:
+                    await get_group_crud().create_with_commit(session, obj_in=group)
 
     async def _execute_cript(self, script: str, upload: Callable):
         try:
@@ -80,4 +101,10 @@ class Parser:
         self.logger.info("Start parsing groups id")
         async for script in GidScriptIterator(self.pars_id):
             await self._execute_cript(script, self._upload_gids)
+        self.logger.info("Finish parsing groups id")
+
+    async def _pars_groups(self):
+        self.logger.info("Start parsing groups id")
+        async for script in GroupScriptIterator(self.pars_id):
+            await self._execute_cript(script, self._upload_group)
         self.logger.info("Finish parsing groups id")

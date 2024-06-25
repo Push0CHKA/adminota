@@ -10,7 +10,7 @@ from typing import TypeVar
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
-from sqlalchemy import CursorResult
+from sqlalchemy import CursorResult, text, and_, or_
 from sqlalchemy import delete
 from sqlalchemy import Select
 from sqlalchemy import select
@@ -18,6 +18,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import OperatorExpression
 from sqlalchemy.sql.elements import UnaryExpression
+from sqlalchemy.sql.functions import func
 
 from src.core.database.database import Base
 
@@ -48,7 +49,7 @@ def map_to_schema_result(func) -> ():
 
 
 UpdateFilter: TypeAlias = (
-    dict[str, ...] | list[OperatorExpression] | OperatorExpression | Any
+    list[list[str | dict]] | list[OperatorExpression] | OperatorExpression | Any
 )
 
 
@@ -68,7 +69,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
     def model(self):
         return self._model
 
-    def _generate_where_cause(
+    def _get_dict_condition(
         self, filter_dict: dict[str, ...] | None = None
     ) -> Generator[bool, Any, None]:
         filter_dict = filter_dict or {}
@@ -76,13 +77,46 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
             getattr(self._model, field) == value for field, value in filter_dict.items()
         )
 
+    def _generate_where_cause(
+        self,
+        filter_: list[list[str | dict]] | None = None,
+        or_extern: bool = True,
+    ):
+        if not filter_:
+            return text("")
+        extern_cond = []
+        for extern_filter in filter_:
+            intern_cond = []
+            for intern_filter in extern_filter:
+                if isinstance(intern_filter, str):
+                    intern_cond.append(text(intern_filter))
+                else:
+                    intern_cond.append(*self._get_dict_condition(intern_filter))
+            if or_extern:
+                extern_cond.append(and_(*intern_cond))
+            else:
+                extern_cond.append(or_(*intern_cond))
+        if or_extern:
+            return or_(*extern_cond)
+        return and_(*extern_cond)
+
     @property
     def _select_model(self) -> Select:
         """can be used for config options with inload"""
         return select(self._model)
 
+    @property
+    def _select_count(self) -> Select:
+        """can be used for count of models"""
+        return select(func.count()).select_from(self._model)
+
+    @property
+    def _select_for_count(self) -> Select:
+        """can be used for rows count"""
+        return select(self._model.id)
+
     def _resolve_filter(self, filter_: UpdateFilter) -> list[OperatorExpression]:
-        if isinstance(filter_, dict):
+        if isinstance(filter_, list):
             filter_ = self._generate_where_cause(filter_)
 
         if not isinstance(filter_, Iterable):
@@ -97,14 +131,14 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         order_by: UnaryExpression | None = None,
         operator_expressions: list[OperatorExpression] | None = None,
         options: Any | None = None,
-        **filter_dict: ...,
+        filter_: list[list[str | dict]] = None,
     ) -> list[ModelType]:
         stmt = self._select_model
         if operator_expressions is not None:
             operator_expressions = self._resolve_filter(operator_expressions)
             stmt = stmt.where(*operator_expressions)
-        if filter_dict:
-            operator_expressions = self._resolve_filter(filter_dict)
+        if filter_:
+            operator_expressions = self._resolve_filter(filter_)
             stmt = stmt.where(*operator_expressions)
         if options:
             operator_expressions = self._resolve_filter(options)
@@ -126,7 +160,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         order_by: UnaryExpression | None = None,
         operator_expressions: list[OperatorExpression] | None = None,
         options: Any | None = None,
-        **filter_dict: ...,
+        filter_: list[list[str | dict[str, ...]]] = None,
     ) -> list[GetSchemaType]:
         return await self.get_multi_model(
             session,
@@ -135,16 +169,16 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
             order_by,
             operator_expressions,
             options,
-            **filter_dict,
+            filter_,
         )
 
     async def get_one_model(
         self,
         session: AsyncSession,
-        filter_dict: dict[str, ...],
+        filter_: list[list[str | dict[str, ...]]],
         options: Any | None = None,
     ) -> ModelType:
-        stmt = self._select_model.where(*self._generate_where_cause(filter_dict))
+        stmt = self._select_model.where(*self._generate_where_cause(filter_))
         if options:
             operator_expressions = self._resolve_filter(options)
             stmt = stmt.options(*operator_expressions)
@@ -154,10 +188,10 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
     async def get_one(
         self,
         session: AsyncSession,
-        filter_dict: dict[str, ...],
+        filter_: list[list[str | dict[str, ...]]],
         options: Any | None = None,
     ) -> GetSchemaType:
-        return await self.get_one_model(session, filter_dict, options)
+        return await self.get_one_model(session, filter_, options)
 
     async def create(
         self, session: AsyncSession, *, obj_in: dict | CreateSchemaType
@@ -206,18 +240,26 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         result: CursorResult = await session.execute(update_stmt)
         return result.rowcount
 
+    async def get_count(
+        self,
+        session: AsyncSession,
+        filter_: list[list[str | dict[str, ...]]] | None = None,
+    ):
+        stmt = self._select_count.where(self._generate_where_cause(filter_))
+        return (await session.execute(stmt)).scalar()
+
     async def delete(
         self,
         session: AsyncSession,
         operator_expressions: list[OperatorExpression] | None = None,
-        **filter_dict: dict[str, ...],
+        filter_: list[list[str | dict[str, ...]]] = None,
     ) -> int:
         stmt = delete(self._model)
         if operator_expressions is not None:
             operator_expressions = self._resolve_filter(operator_expressions)
             stmt = stmt.where(*operator_expressions)
-        if filter_dict:
-            operator_expressions = self._resolve_filter(filter_dict)
+        if filter_:
+            operator_expressions = self._resolve_filter(filter_)
             stmt = stmt.where(*operator_expressions)
 
         result: CursorResult = await session.execute(stmt)

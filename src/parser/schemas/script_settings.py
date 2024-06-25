@@ -1,4 +1,3 @@
-ID_GROUP_PARAMS = "members_count,contacts"
 VKS_MAIN_GROUP = (
     'API.groups.getById({{"group_ids": "{group_ids}", "fields": "{fields}"}}),'
 )

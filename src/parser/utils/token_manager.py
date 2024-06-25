@@ -59,7 +59,7 @@ class TokenManager:
         async with get_session() as session:
             await get_token_crud().update(
                 session,
-                update_filter={Token.id.name: token.id},
+                update_filter=[[{Token.id.name: token.id}]],
                 update_values={
                     Token.in_use.name: False,
                     Token.deactivated.name: True,
@@ -72,7 +72,7 @@ class TokenManager:
         async with get_session() as session:
             await get_token_crud().update(
                 session,
-                update_filter={Token.id.name: token.id},
+                update_filter=[[{Token.id.name: token.id}]],
                 update_values={Token.in_use.name: True},
             )
             await get_token_crud().commit(session)
@@ -84,10 +84,12 @@ class TokenManager:
             try:
                 token = await get_token_crud().get_one_model(
                     session,
-                    {
-                        Token.in_use.name: False,
-                        Token.deactivated.name: False,
-                    },
+                    [
+                        [
+                            {Token.in_use.name: False},
+                            {Token.deactivated.name: False},
+                        ]
+                    ],
                 )
                 if token is None:
                     raise TokenError("No available token in database")
@@ -95,6 +97,15 @@ class TokenManager:
                 raise TokenError(f"Unhandled SQLAlchemy error: {e}")
         cls.logger.debug("Token was successfully got from database")
         return token
+
+    @classmethod
+    async def activate_all(cls):
+        async with get_session() as session:
+            await get_token_crud().update(
+                session,
+                update_values={Token.in_use.name: False},
+            )
+            await get_token_crud().commit(session)
 
 
 @lru_cache(None)

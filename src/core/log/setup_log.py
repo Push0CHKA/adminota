@@ -54,7 +54,7 @@ class ParsLogger:
         self.pars_id = pars_id
 
     def log_msg(self, log: str):
-        return f"[Parser №{self.pars_id if self.pars_id  != 0 else VkApiParams.pars_cnt}]: {log}"
+        return f"[Parser №{self.pars_id if self.pars_id  != 0 else VkApiParams.PARSERS_CNT}]: {log}"
 
     def trace(self, log):
         logger.trace(self.log_msg(log))

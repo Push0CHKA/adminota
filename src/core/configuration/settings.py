@@ -51,7 +51,7 @@ class DBSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="db_")
 
     host: str = Field(
-        default="database",
+        default="127.0.0.1",
         description="Database host",
     )
     port: int = Field(
