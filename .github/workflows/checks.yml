@@ -11,17 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install python
+      - name: Setup Python 3.10
         uses: actions/setup-python@v2
         with:
           python-version: "3.10"
-      - name: Install linter
-        run: pip install flake8
-      - name: Run flake8
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install flake8
+          pip install -r requirements.txt
+      - name: Lint with flake8
         run: flake8 . --count --select=E501,E203,E402,E712,I001,I003,I004,I005,W503,F401 --max-line-length=79 --show-source --statistics
-      - name: Install requirements
-        run: pip install -r requirements.txt
-      - name: Install pytest
-        run: pip install pytest
-      - name: Run pytest
+      - name: Test with pytest
         run: pytest
