@@ -80,7 +80,7 @@ class GroupSchemaCreate(OrmSchema):
     city: dict | None = None
     contacts: list[dict] | None = None
     country: dict | None = None
-    cover: list[dict] | None = None
+    cover: str | None = None
     description: str | None = None
     fixed_post: int | None = None
     has_photo: bool | None = None
@@ -98,7 +98,9 @@ class GroupSchemaCreate(OrmSchema):
     def __init__(self, **kwargs):
         kwargs["group_id"] = kwargs["id"]
         kwargs["photo"] = kwargs["photo_200"]
-        kwargs["cover"] = kwargs.get("cover", {}).get("images", None)
+        kwargs["cover"] = (
+            kwargs.get("cover", {}).get("images", [{"url": None}])[-1].get("url")
+        )
         kwargs["addresses"] = (
             kwargs.get("addresses")
             if kwargs.get("addresses")

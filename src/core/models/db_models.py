@@ -45,7 +45,7 @@ class Group(IdMixin, BlacklistedMixin, Base):
     city = Column(JSONB, default=None)
     contacts = Column(JSONB, default=None)
     country = Column(JSONB, default=None)
-    cover = Column(JSONB, default=None)
+    cover = Column(String, default=None)
     description = Column(String, default=None)
     fixed_post = Column(Integer, default=None)
     has_photo = Column(Boolean, default=None)
