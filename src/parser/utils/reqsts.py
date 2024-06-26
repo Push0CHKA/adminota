@@ -24,9 +24,7 @@ class VkApiRequest(Request):
         request_delay: int = 3,
     ):
         for attempt in range(attempts_count):
-            cls.logger.debug(
-                f"Try make request to {url}. Attempt {attempt + 1}"
-            )
+            cls.logger.debug(f"Try make request to {url}. Attempt {attempt + 1}")
             try:
                 code, data = await cls.common_request(
                     method=method,
@@ -46,7 +44,7 @@ class VkApiRequest(Request):
             if error := data.get("error", {}):
                 raise exc.VkApiError(
                     error_code=error.get("error_code"),
-                    message=error.get("error_message"),
+                    message=error.get("error_msg"),
                 )
 
             if 200 <= code < 300 and data.get("response", {}):

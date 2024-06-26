@@ -99,10 +99,20 @@ class ServerSettings(BaseSettings):
         }
 
 
+class ParserSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="parser_")
+    start_time: str = Field(
+        default="00:00",
+        description="Start parsing time for scheduler",
+    )
+    utc: conint(gt=0, lt=23) = 3
+
+
 class Settings(BaseSettings):
     db: DBSettings = Field(default_factory=DBSettings)
     log: LogSettings = Field(default_factory=LogSettings)
     server: ServerSettings = Field(default_factory=ServerSettings)
+    parser: ParserSettings = Field(default_factory=ParserSettings)
 
     @property
     def uvicorn_kwargs(self) -> dict:

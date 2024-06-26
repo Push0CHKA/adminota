@@ -19,7 +19,7 @@ class MainGroupApiParams(VkApiParams):
     """Main groups data params"""
 
     GROUPS_CNT_IN_REQ: int = 450
-    GROUP_SCR_CNT_IN_REQ: int = 20
+    GROUP_SCR_CNT_IN_REQ: int = 10
     FIELDS: str = (
         "members_count,activity,addresses,age_limits,"
         "ban_info,city,contacts,country,cover,description,"

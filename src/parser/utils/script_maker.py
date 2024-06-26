@@ -30,7 +30,7 @@ class ScriptIterator(ABC):
 
 
 class GidScriptIterator(ScriptIterator):
-    def __init__(self, pars_id: int, start_gid: int = 6000000):
+    def __init__(self, pars_id: int, start_gid: int = 1):
         self.start_id = start_gid  # start group id
         super().__init__(pars_id)
 

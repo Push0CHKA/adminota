@@ -80,7 +80,6 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
     def _generate_where_cause(
         self,
         filter_: list[list[str | dict]] | None = None,
-        or_extern: bool = True,
     ):
         if not filter_:
             return text("")
@@ -92,13 +91,8 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
                     intern_cond.append(text(intern_filter))
                 else:
                     intern_cond.append(*self._get_dict_condition(intern_filter))
-            if or_extern:
-                extern_cond.append(and_(*intern_cond))
-            else:
-                extern_cond.append(or_(*intern_cond))
-        if or_extern:
-            return or_(*extern_cond)
-        return and_(*extern_cond)
+            extern_cond.append(and_(*intern_cond))
+        return or_(*extern_cond)
 
     @property
     def _select_model(self) -> Select:
@@ -178,7 +172,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         filter_: list[list[str | dict[str, ...]]],
         options: Any | None = None,
     ) -> ModelType:
-        stmt = self._select_model.where(*self._generate_where_cause(filter_))
+        stmt = self._select_model.where(self._generate_where_cause(filter_))
         if options:
             operator_expressions = self._resolve_filter(options)
             stmt = stmt.options(*operator_expressions)
@@ -231,7 +225,7 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         in other case set possible null values"""
 
         if is_patch:
-            update_values = {k: v for k, v in update_values.items() if v is not None}
+            update_values = {k: v for k, v in update_values.items()}
         update_stmt = update(self._model)
         if update_filter:
             operator_expressions = self._resolve_filter(update_filter)

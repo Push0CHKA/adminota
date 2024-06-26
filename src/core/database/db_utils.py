@@ -14,7 +14,7 @@ def camel_to_snake(camel_string):
 def get_db_url() -> str:
     return (
         f"postgresql+asyncpg://{DBSettings().user}:"
-        f"{DBSettings().password}@{DBSettings().host}:"
-        # f"{DBSettings().password}@host.docker.internal:"
+        # f"{DBSettings().password}@{DBSettings().host}:"
+        f"{DBSettings().password}@host.docker.internal:"
         f"{DBSettings().port}/{DBSettings().name}"
     )

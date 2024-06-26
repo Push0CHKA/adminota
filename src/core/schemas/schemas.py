@@ -7,6 +7,15 @@ from pydantic import ConfigDict
 class OrmSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    def as_dict(self, *exclude_fields: str):
+        exclude_fields = list(exclude_fields)
+        exclude_fields.append("_sa_instance_state")
+        return {
+            name: value
+            for name, value in self.__dict__.items()
+            if name not in exclude_fields
+        }
+
 
 class IdIndexSchema(OrmSchema):
     id: int = None
@@ -17,7 +26,7 @@ class BlacklistedSchema(OrmSchema):
 
 
 class DateCreateSchema(OrmSchema):
-    created_at: datetime = datetime.now()
+    created_at: datetime | None = None
 
 
 class TokenSchemaCreate(OrmSchema):
