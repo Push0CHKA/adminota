@@ -10,22 +10,21 @@ class VkApiSettings:
 @dataclass
 class VkApiParams:
     API_VERSION: float = 5.131
-    MAX_GID: int = 1000000
+    MAX_GID: int = 10000000
     MIN_MEMBERS_CNT: int = 1
-    PARSERS_CNT: int = 2
+    PARSERS_CNT: int = 10
 
 
 class MainGroupApiParams(VkApiParams):
     """Main groups data params"""
 
     GROUPS_CNT_IN_REQ: int = 450
-    GROUP_SCR_CNT_IN_REQ: int = 10
+    GROUP_SCR_CNT_IN_REQ: int = 20
     FIELDS: str = (
         "members_count,activity,addresses,age_limits,"
-        "ban_info,city,contacts,counters,country,cover,"
-        "description,fixed_post,has_photo,links,main_album_id,"
-        "main_section,market,place,public_date_label,site,"
-        "status,trending,verified,wall,wiki_page"
+        "ban_info,city,contacts,country,cover,description,"
+        "fixed_post,has_photo,main_album_id,main_section,"
+        "market,site,status,trending,verified,wall,wiki_page"
     )
 
 

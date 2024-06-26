@@ -70,22 +70,16 @@ class GroupSchemaCreate(OrmSchema):
     ban_info: dict | None = None
     city: dict | None = None
     contacts: list[dict] | None = None
-    counters: dict | None = None
     country: dict | None = None
     cover: list[dict] | None = None
     description: str | None = None
     fixed_post: int | None = None
     has_photo: bool | None = None
-    links: list[dict] | None = None
     main_album_id: int | None = None
     main_section: int | None = None
     market: dict | None = None
     members_count: int
-    place: dict | None = None
-    public_date_label: str | None = None
     site: str | None = None
-    start_date: datetime | None = None
-    finish_date: datetime | None = None
     status: str | None = None
     trending: bool = False
     verified: bool = False

@@ -18,19 +18,17 @@ from src.parser.utils.reqsts import VkApiRequest
 class TokenManager:
     logger = logger
     vk_request = VkApiRequest
-    _is_approved = asyncio.Event()
-
-    def __init__(self):
-        self._is_approved.set()
+    parser_queue: asyncio.Queue = asyncio.Queue(1)
 
     @classmethod
     async def get_active_token(cls) -> Token:
-        await cls._is_approved.wait()
+        while cls.parser_queue.full():
+            await asyncio.sleep(1)
+        await cls.parser_queue.put(None)
         while True:
-            cls._is_approved.clear()
             if await cls._is_valid_token(token := await cls._get_token_from_db()):
                 await cls._mark_token_as_using(token)
-                cls._is_approved.set()
+                await cls.parser_queue.get()
                 return token
 
     @classmethod

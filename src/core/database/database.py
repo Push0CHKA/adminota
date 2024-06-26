@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,7 +50,8 @@ async def get_session() -> AsyncSession:
     try:
         async with Database().AsyncSessionLocal() as session:
             yield session
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        logger.error(f"Sqlalchemy error! Error: {e}")
         await session.rollback()
         raise
     finally:

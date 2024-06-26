@@ -39,37 +39,42 @@ class Parser:
         self.logger.info("Token was successfully updated")
 
     async def _upload_gids(self, data: list[list[dict]]):
-        for group_data in data:
-            if not group_data:
-                self.logger.warning(
-                    f"Failed mapped json data do Gid model. Json: {group_data}"
-                )
-                continue
-            try:
-                if group_data[0].get("members_count", 0) < VkApiParams.MIN_MEMBERS_CNT:
+        async with get_session() as session:
+            for group_data in data:
+                if not group_data:
+                    self.logger.warning(
+                        f"Failed mapped json data do Gid model. Json: {group_data}"
+                    )
                     continue
-                gid = GidSchema.parse_obj(group_data[0])
-                gid.id = None
-            except ValidationError:
-                continue
-            async with get_session() as session:
-                await get_gid_crud().create_with_commit(session, obj_in=gid)
-
-    async def _upload_group(self, data: list[list[dict]]):
-        for groups_data in data:
-            if not groups_data:
-                self.logger.warning(
-                    f"Failed mapped json data do group model. Json: {groups_data}"
-                )
-                continue
-            for group_data in groups_data:
                 try:
-                    group = GroupSchema.parse_obj(group_data)
-                    group.id = None
+                    if (
+                        group_data[0].get("members_count", 0)
+                        < VkApiParams.MIN_MEMBERS_CNT
+                    ):
+                        continue
+                    gid = GidSchema.parse_obj(group_data[0])
+                    gid.id = None
                 except ValidationError:
                     continue
-                async with get_session() as session:
-                    await get_group_crud().create_with_commit(session, obj_in=group)
+                await get_gid_crud().create(session, obj_in=gid)
+            await get_gid_crud().commit(session)
+
+    async def _upload_group(self, data: list[list[dict]]):
+        async with get_session() as session:
+            for groups_data in data:
+                if not groups_data:
+                    self.logger.warning(
+                        f"Failed mapped json data do group model. Json: {groups_data}"
+                    )
+                    continue
+                for group_data in groups_data:
+                    try:
+                        group = GroupSchema.parse_obj(group_data)
+                        group.id = None
+                    except ValidationError:
+                        continue
+                    await get_group_crud().create(session, obj_in=group)
+            await get_group_crud().commit(session)
 
     async def _execute_cript(self, script: str, upload: Callable):
         try:
@@ -89,7 +94,7 @@ class Parser:
                 self.logger.debug(f"Received token error [{e.error_code}, {e.message}]")
                 await self._update_token()
             elif e.error_code in VkApiErrorCodes.TOO_BIG_DATA:
-                # todo change response size
+                # todo change request size
                 ...
             raise
         except Exception as e:
@@ -104,7 +109,7 @@ class Parser:
         self.logger.info("Finish parsing groups id")
 
     async def _pars_groups(self):
-        self.logger.info("Start parsing groups id")
+        self.logger.info("Start parsing groups main data")
         async for script in GroupScriptIterator(self.pars_id):
             await self._execute_cript(script, self._upload_group)
-        self.logger.info("Finish parsing groups id")
+        self.logger.info("Finish parsing groups main data")
