@@ -64,7 +64,7 @@ class Group(BlacklistedMixin, Base):
     wall = Column(Integer, default=None)
     wiki_page = Column(String, default=None)
 
-    change = relationship("Change", back_populates="group")
+    change = relationship("Change", back_populates="group", lazy="subquery")
     statistic = relationship("Gstat", back_populates="group", lazy="subquery")
 
 
@@ -74,7 +74,7 @@ class Change(IdMixin, DateCreateMixin, Base):
     group_id = Column(Integer, ForeignKey("group.group_id"), nullable=False, index=True)
     changes = Column(JSONB, nullable=False)
 
-    group = relationship("Group", back_populates="change")
+    group = relationship("Group", back_populates="change", lazy="subquery")
 
 
 class Gstat(Base):
@@ -100,4 +100,4 @@ class Gstat(Base):
     cities = Column(JSONB, default=None)
     countries = Column(JSONB, default=None)
 
-    group = relationship("Group", back_populates="statistic")
+    group = relationship("Group", back_populates="statistic", lazy="subquery")
