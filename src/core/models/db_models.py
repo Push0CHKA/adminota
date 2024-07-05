@@ -1,9 +1,10 @@
-from sqlalchemy import Boolean
+from sqlalchemy import Boolean, ForeignKey
 from sqlalchemy import Column
 from sqlalchemy import DateTime
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
 
 from src.core.database.database import Base
 from src.core.database.mixins import BlacklistedMixin
@@ -20,18 +21,21 @@ class Token(IdMixin, DateCreateMixin, Base):
     last_use_date = Column(DateTime, default=None, nullable=True)
 
 
-class Gid(IdMixin, BlacklistedMixin, Base):
+class Gid(BlacklistedMixin, Base):
     """Groups id"""
 
-    group_id = Column(Integer, unique=True, index=True)
+    group_id = Column(Integer, primary_key=True)
     members_count = Column(Integer, nullable=False)
     deactivated_day_count = Column(Integer, default=0, nullable=False)
 
 
-class Group(IdMixin, BlacklistedMixin, Base):
-    """Таблица с основными данными сообществ"""
+class Group(BlacklistedMixin, Base):
+    """Main group data"""
 
-    group_id = Column(Integer, unique=True, index=True)
+    group_id = Column(
+        Integer,
+        primary_key=True,
+    )
     name = Column(String, nullable=False)
     screen_name = Column(String, nullable=False)
     is_closed = Column(Boolean, default=None)
@@ -60,9 +64,40 @@ class Group(IdMixin, BlacklistedMixin, Base):
     wall = Column(Integer, default=None)
     wiki_page = Column(String, default=None)
 
+    change = relationship("Change", back_populates="group")
+    statistic = relationship("Gstat", back_populates="group", lazy="subquery")
 
-class Change(IdMixin, DateCreateMixin, BlacklistedMixin, Base):
-    """Таблица с изменениями сообществ"""
 
-    group_id = Column(Integer, nullable=False, index=True)
+class Change(IdMixin, DateCreateMixin, Base):
+    """Group changes"""
+
+    group_id = Column(Integer, ForeignKey("group.group_id"), nullable=False, index=True)
     changes = Column(JSONB, nullable=False)
+
+    group = relationship("Group", back_populates="change")
+
+
+class Gstat(Base):
+    """Interval group statistic"""
+
+    group_id = Column(Integer, ForeignKey("group.group_id"), primary_key=True)
+    interval = Column(String, primary_key=True)
+    closed_stat = Column(Boolean, default=True)
+    comments = Column(Integer, default=None)
+    copies = Column(Integer, default=None)
+    hidden = Column(Integer, default=None)
+    subscribed = Column(Integer, default=None)
+    unsubscribed = Column(Integer, default=None)
+    likes = Column(Integer, default=None)
+    views = Column(Integer, default=None)
+    visitors = Column(Integer, default=None)
+    reach_reach = Column(Integer, default=None)
+    reach_subscribers = Column(Integer, default=None)
+    mobile_reach = Column(Integer, default=None)
+    sex = Column(JSONB, default=None)
+    age = Column(JSONB, default=None)
+    sex_age = Column(JSONB, default=None)
+    cities = Column(JSONB, default=None)
+    countries = Column(JSONB, default=None)
+
+    group = relationship("Group", back_populates="statistic")

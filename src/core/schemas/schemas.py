@@ -29,6 +29,14 @@ class DateCreateSchema(OrmSchema):
     created_at: datetime | None = None
 
 
+class GroupIdSchema(OrmSchema):
+    group_id: int
+
+
+class IntervalSchema(OrmSchema):
+    interval: str
+
+
 class TokenSchemaCreate(OrmSchema):
     token: str
     in_use: bool
@@ -40,8 +48,7 @@ class TokenSchema(IdIndexSchema, DateCreateSchema, TokenSchemaCreate):
     ...
 
 
-class GidSchemaCreate(OrmSchema):
-    group_id: int
+class GidSchemaCreate(GroupIdSchema):
     members_count: int
     deactivated_day_count: int = 0
 
@@ -50,23 +57,19 @@ class GidSchemaCreate(OrmSchema):
         super().__init__(**kwargs)
 
 
-class GidSchema(IdIndexSchema, BlacklistedSchema, GidSchemaCreate):
+class GidSchema(BlacklistedSchema, GidSchemaCreate):
     ...
 
 
-class ChangeSchemaCreate(OrmSchema):
-    group_id: int
+class ChangeSchemaCreate(GroupIdSchema):
     changes: dict
 
 
-class ChangeSchema(
-    IdIndexSchema, BlacklistedSchema, DateCreateSchema, ChangeSchemaCreate
-):
+class ChangeSchema(IdIndexSchema, DateCreateSchema, ChangeSchemaCreate):
     ...
 
 
-class GroupSchemaCreate(OrmSchema):
-    group_id: int
+class GroupSchemaCreate(GroupIdSchema):
     name: str
     screen_name: str
     is_closed: bool
@@ -111,5 +114,55 @@ class GroupSchemaCreate(OrmSchema):
         super().__init__(**kwargs)
 
 
-class GroupSchema(IdIndexSchema, BlacklistedSchema, GroupSchemaCreate):
+class GroupSchema(BlacklistedSchema, GroupSchemaCreate):
+    ...
+
+
+class GstatSchemaCreate(GroupIdSchema, IntervalSchema):
+    closed_stat: bool = True
+    comments: int | None = None
+    copies: int | None = None
+    hidden: int | None = None
+    likes: int | None = None
+    subscribed: int | None = None
+    unsubscribed: int | None = None
+    views: int | None = None
+    visitors: int | None = None
+    reach_reach: int | None = None
+    reach_subscribers: int | None = None
+    mobile_reach: int | None = None
+    sex: list[dict] | None = None
+    age: list[dict] | None = None
+    sex_age: list[dict] | None = None
+    cities: list[dict] | None = None
+    countries: list[dict] | None = None
+
+    def __init__(self, **kwargs):
+        kwargs["comments"] = kwargs.get("activity", {}).get("comments")
+        kwargs["copies"] = kwargs.get("activity", {}).get("copies")
+        kwargs["hidden"] = kwargs.get("activity", {}).get("hidden")
+        kwargs["likes"] = kwargs.get("activity", {}).get("likes")
+        kwargs["subscribed"] = kwargs.get("activity", {}).get("subscribed")
+        kwargs["unsubscribed"] = kwargs.get("activity", {}).get("unsubscribed")
+        kwargs["closed_stat"] = (
+            False
+            if kwargs.get("activity")
+            or kwargs.get("reach", {})
+            or kwargs.get("visitors", {})
+            else True
+        )
+        kwargs["views"] = kwargs.get("visitors", {}).get("views")
+        kwargs["visitors"] = kwargs.get("visitors", {}).get("visitors")
+        kwargs["reach_reach"] = kwargs.get("reach", {}).get("reach")
+        kwargs["reach_subscribers"] = kwargs.get("reach", {}).get("reach_subscribers")
+        kwargs["mobile_reach"] = kwargs.get("reach", {}).get("mobile_reach")
+        kwargs["sex"] = kwargs.get("reach", {}).get("sex")
+        kwargs["age"] = kwargs.get("reach", {}).get("age")
+        kwargs["sex_age"] = kwargs.get("reach", {}).get("sex_age")
+        kwargs["cities"] = kwargs.get("reach", {}).get("cities")
+        kwargs["countries"] = kwargs.get("reach", {}).get("countries")
+        super().__init__(**kwargs)
+
+
+class GstatSchema(GstatSchemaCreate):
     ...

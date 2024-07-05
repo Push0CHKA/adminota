@@ -1,3 +1,10 @@
+import traceback
+
+
+def get_tb(e: Exception) -> str:
+    return "".join(traceback.format_exception(type(e), value=e, tb=e.__traceback__))
+
+
 class VkApiError(Exception):
     """Exception raised when VK API receive error.
 

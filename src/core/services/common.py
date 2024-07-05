@@ -1,6 +1,8 @@
 import asyncio
 from abc import ABC
 from abc import abstractmethod
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
 import uvicorn
 from fastapi import FastAPI
@@ -101,16 +103,15 @@ class App(ABC):
     def __init__(
         self,
         tags_metadata,
-        event_handler: AppEventHandler,
         title="App",
         reload=False,
     ):
         self._title = title
-        self._event_handler = event_handler
         self._reload = reload
         self._app: FastAPI = FastAPI(
             openapi_tags=tags_metadata,
             docs_url="/docs",
+            lifespan=self.lifespan,
         )
         self._app.add_middleware(
             CORSMiddleware,
@@ -124,19 +125,14 @@ class App(ABC):
     def configure_routes(self):
         raise NotImplementedError
 
-    def configure_dependencies(self):
-        @self._app.on_event("startup")
-        async def startup_event():
-            await self._event_handler.on_startup()
-
-        @self._app.on_event("shutdown")
-        async def shutdown_event():
-            await self._event_handler.on_shutdown()
+    @asynccontextmanager
+    @abstractmethod
+    async def lifespan(self, _: FastAPI) -> AsyncIterator[None]:
+        raise NotImplementedError
 
     def run(self, loop=None):
         SystemManager.load_default_config()
         self.configure_routes()
-        self.configure_dependencies()
         if loop:
             config = uvicorn.Config(
                 self._app,

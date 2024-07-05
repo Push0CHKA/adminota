@@ -125,14 +125,15 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
         order_by: UnaryExpression | None = None,
         operator_expressions: list[OperatorExpression] | None = None,
         options: Any | None = None,
-        filter_: list[list[str | dict]] = None,
+        where_: list[list[str | dict]] = None,
+        filter_: Any | None = None,
     ) -> list[ModelType]:
         stmt = self._select_model
         if operator_expressions is not None:
             operator_expressions = self._resolve_filter(operator_expressions)
             stmt = stmt.where(*operator_expressions)
-        if filter_:
-            operator_expressions = self._resolve_filter(filter_)
+        if where_:
+            operator_expressions = self._resolve_filter(where_)
             stmt = stmt.where(*operator_expressions)
         if options:
             operator_expressions = self._resolve_filter(options)
@@ -142,6 +143,9 @@ class CRUDBase(Generic[ModelType, GetSchemaType, CreateSchemaType]):
             stmt = stmt.limit(limit)
         if order_by is not None:
             stmt = stmt.order_by(order_by)
+
+        if filter_ is not None:
+            stmt = stmt.filter(filter_)
 
         return (await session.execute(stmt)).scalars().all()
 

@@ -22,6 +22,6 @@ jobs:
           pip install flake8
           pip install -r requirements.txt
       - name: Lint with flake8
-        run: flake8 . --count --select=E501,E203,E402,E712,I001,I003,I004,I005,W503,F401 --max-line-length=79 --show-source --statistics
+        run: flake8 . --count --select=E501,E203,E402,E712,I001,I003,I004,I005,W503,F401,F821,F722 --max-line-length=79 --show-source --statistics
       - name: Test with pytest
         run: pytest

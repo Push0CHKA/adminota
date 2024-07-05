@@ -2,12 +2,19 @@ from abc import ABC, abstractmethod
 from typing import AsyncGenerator
 
 from src.core.crud.gid import get_gid_crud
-from src.parser.schemas.script_settings import VKS_MAIN_GROUP
+from src.core.crud.group import get_group_crud
+from src.core.crud.group_stat import get_group_stat_crud
+from src.parser.schemas.script_settings import VKS_MAIN_GROUP, VKS_GROUP_STAT
 from src.parser.schemas.script_settings import VKS_RETURN_LIST
 from src.core.database.database import get_session
 from src.core.log.setup_log import ParsLogger
-from src.core.models.db_models import Gid
-from src.parser.schemas.vk_api_schemas import MainGroupApiParams, GidApiParams
+from src.core.models.db_models import Gid, Gstat
+from src.parser.schemas.vk_api_schemas import (
+    MainGroupApiParams,
+    GidApiParams,
+    StatApiParams,
+)
+from src.parser.utils.utils import now_unix_time, get_days_ago_time
 
 
 class ScriptIterator(ABC):
@@ -54,15 +61,15 @@ class GidScriptIterator(ScriptIterator):
             GidApiParams.MAX_GID,
             GidApiParams.PARSERS_CNT,
         ):
-            if gid > offset:
+            if gid >= offset:
                 async with get_session() as session:
                     db_gids = await get_gid_crud().get_multi_model(
                         session=session,
-                        filter_=[
+                        where_=[
                             [
                                 f"{Gid.group_id.name} % {GidApiParams.PARSERS_CNT} = {self.pars_id}",
-                                f"{Gid.group_id.name} > {offset}",
-                                f"{Gid.group_id.name} < {self._get_offset_limit(offset)}",
+                                f"{Gid.group_id.name} >= {offset}",
+                                f"{Gid.group_id.name} <= {self._get_offset_limit(offset)}",
                             ]
                         ],
                     )
@@ -107,7 +114,7 @@ class GroupScriptIterator(ScriptIterator):
         async with get_session() as session:
             gid_cnt = await get_gid_crud().get_count(
                 session,
-                filter_=[
+                where_=[
                     [
                         f"{Gid.group_id.name} % {MainGroupApiParams.PARSERS_CNT} = {self.pars_id}",
                         {Gid.blacklisted.name: False},
@@ -122,7 +129,7 @@ class GroupScriptIterator(ScriptIterator):
                     session,
                     limit=MainGroupApiParams.GROUPS_CNT_IN_REQ,
                     offset=offset,
-                    filter_=[
+                    where_=[
                         [
                             f"{Gid.group_id} % {MainGroupApiParams.PARSERS_CNT} = {self.pars_id}"
                         ]
@@ -143,3 +150,95 @@ class GroupScriptIterator(ScriptIterator):
                 yield VKS_RETURN_LIST.format(data=vk_script[:-1])
                 vk_script = ""
                 script_cnt = 0
+
+
+class GstatIterator(ScriptIterator):
+    class StatInterval:
+        """Time intervals"""
+
+        def __init__(self):
+            self.__start_time = now_unix_time()
+            self.__intervals = [
+                ["day", get_days_ago_time(1)],
+                ["week", get_days_ago_time(7)],
+                ["month", get_days_ago_time(30)],
+                ["year", get_days_ago_time(365)],
+            ]
+
+        def inter_cnt(self):
+            return len(self.__intervals)
+
+        def __iter__(self):
+            for item in self.__intervals:
+                yield item[0], self.__start_time, item[1]
+
+    def __init__(self, pars_id):
+        super().__init__(pars_id)
+
+    async def _get_script_generator(self):
+        """Interval group statistic script"""
+        vk_script = str()  # vksrcipt string
+        async with get_session() as session:
+            for interv, tmst_to, tmst_from in self.StatInterval():
+                if interv != "day":
+                    closed = await get_group_stat_crud().get_multi_model(
+                        session,
+                        where_=[
+                            [
+                                f"{Gstat.group_id.name} % {MainGroupApiParams.PARSERS_CNT} = {self.pars_id}",
+                                {Gstat.closed_stat.name: True},
+                            ]
+                        ],
+                    )
+                    closed = [group.group_id for group in closed]
+                else:
+                    closed = []
+
+                not_in_closed = ""
+                if closed:
+                    not_in_closed = f"{Gid.group_id.name} NOT IN ({','.join([str(cl) for cl in closed])})"
+
+                # Groups count for this parser
+                gid_cnt = await get_group_crud().get_count(
+                    session,
+                    where_=[
+                        [
+                            f"{Gid.group_id.name} % {MainGroupApiParams.PARSERS_CNT} = {self.pars_id}",
+                            {Gid.blacklisted.name: False},
+                            not_in_closed,
+                        ]
+                    ],
+                )
+                for offset in range(0, gid_cnt, StatApiParams.STAT_SCRIPT_CNT_IN_REQ):
+                    gids = await get_group_crud().get_multi_model(
+                        session,
+                        offset=offset,
+                        limit=StatApiParams.STAT_SCRIPT_CNT_IN_REQ,
+                        where_=[
+                            [
+                                f"{Gid.group_id.name} % {MainGroupApiParams.PARSERS_CNT} = {self.pars_id}",
+                                {Gid.blacklisted.name: False},
+                                not_in_closed,
+                            ]
+                        ],
+                    )
+                    gids = [gid.group_id for gid in gids]  # list with gid
+                    # no ids
+                    if not gids:
+                        break
+                    for group_id in gids:
+                        # create script
+                        vk_script += VKS_GROUP_STAT.format(
+                            group_id=group_id,
+                            interval=interv,
+                            timestamp_from=tmst_from,
+                            timestamp_to=tmst_to,
+                            intervals_count=1,
+                            group_stat_param=StatApiParams.FIELDS,
+                        )
+                    yield VKS_RETURN_LIST.format(data=vk_script[:-1]), interv
+                    vk_script = ""
+                    if offset % (StatApiParams.STAT_SCRIPT_CNT_IN_REQ * 5) == 0:
+                        self.logger.info(
+                            f"Parse {interv} group statistic. Offset: {offset}({gid_cnt})"
+                        )

@@ -10,9 +10,9 @@ class VkApiSettings:
 @dataclass
 class VkApiParams:
     API_VERSION: float = 5.131
-    MAX_GID: int = 10000000
+    MAX_GID: int = 100000
     MIN_MEMBERS_CNT: int = 1
-    PARSERS_CNT: int = 10
+    PARSERS_CNT: int = 2
 
 
 class MainGroupApiParams(VkApiParams):
@@ -34,6 +34,13 @@ class GidApiParams(VkApiParams):
     GROUPS_CNT_IN_REQ: int = 450
     GID_SCR_CNT_IN_REQ: int = 20
     FIELDS = "members_count,contacts"
+
+
+class StatApiParams(VkApiParams):
+    """Group statistic params"""
+
+    STAT_SCRIPT_CNT_IN_REQ: int = 20
+    FIELDS = "visitors,reach,activity"
 
 
 @dataclass

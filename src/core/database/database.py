@@ -56,3 +56,11 @@ async def get_session() -> AsyncSession:
         raise
     finally:
         await session.close()
+
+
+async def get_db() -> AsyncSession:
+    try:
+        async with Database().AsyncSessionLocal() as session:
+            yield session
+    finally:
+        await session.close()

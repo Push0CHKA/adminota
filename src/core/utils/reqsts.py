@@ -1,7 +1,8 @@
 import time
-from json import JSONDecodeError
+from json.decoder import JSONDecodeError
 from typing import Literal
 
+import chardet
 import httpx
 from httpx import ConnectError
 from httpx import Response
@@ -15,11 +16,19 @@ class Request:
     logger = logger
 
     @classmethod
-    def dispatch_response(cls, resp: Response) -> dict:
+    def dispatch_response(cls, resp: Response):
         try:
+            # TODO fix vk encoding
             return resp.json()
         except JSONDecodeError:
-            cls.logger.error(f"Got not jsonable response with body {resp.text}")
+            cls.logger.error("Failed jsonify response")
+        except UnicodeDecodeError:
+            cls.logger.error("Failed decode response")
+        return {}
+
+    @staticmethod
+    def autodetect(content):
+        return chardet.detect(content).get("encoding")
 
     @classmethod
     async def common_request(
@@ -34,7 +43,7 @@ class Request:
         """Common request"""
         before_request_time = time.time()
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(default_encoding=cls.autodetect) as client:
                 resp = await client.request(
                     method,
                     url,

@@ -21,7 +21,7 @@ class VkApiRequest(Request):
         params: dict = None,
         json_: dict = None,
         attempts_count: int = 5,
-        request_delay: int = 3,
+        request_delay: int = 5,
     ):
         for attempt in range(attempts_count):
             cls.logger.debug(f"Try make request to {url}. Attempt {attempt + 1}")
